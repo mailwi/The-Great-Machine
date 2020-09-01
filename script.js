@@ -1,5 +1,5 @@
 setup(function () {
-  R.seeCollisions = true
+  R.seeCollisions = false
 
   const obj = {
   }
@@ -118,4 +118,42 @@ setup(function () {
       this.goto(groundX, groundY)
     })
   })
+
+  createSprite('OpenObject', function () {
+    addCostumes(this, [
+      {name: 'chest', data: 'images/shoot.png'},
+      {name: 'chest1', data: 'images/platformPack_tile004.png'}
+    ])
+
+    collisionRect(this, 0, 0, 64, 64)
+
+    this.set('collect', 0)
+
+    whenGameStart(this, async () => {
+      await this.costumesLoaded
+      this.goto(704, 512)
+    })
+
+    this.whenThisSpriteClicked(()  => {
+      if (touching(this, 'Char')){
+        this.set('collect', 1)
+      }
+    })
+    
+    foreverWait(this, async () => {
+      const collect = this.get('collect')
+      switch(collect) {
+        case 0:
+          this.switchCostumeTo('chest')
+          break
+        case 1:
+          this.switchCostumeTo('chest1')
+      }
+    })
+
+    this.draw(() => {
+      drawCostume(this)
+    })
+  })
+
 })
