@@ -1,8 +1,11 @@
 setup(function () {
   R.seeCollisions = false
 
-  const obj = {
-  }
+  let teamX = 500
+  let teamY = 64 * 7 + 32
+  let teamMove = false
+
+  const team = []
 
   createSprite('Char', function () {
     addCostumes(this, [
@@ -17,40 +20,58 @@ setup(function () {
 
     collisionRect(this, 25, 32, 50, 50)
 
-    this.set('animation', 0)
-    this.set('move', false)
-    this.set('moveSpeed', 100)
-
     whenGameStart(this, async () => {
-      this.goto(500, 64 * 7 + 32)
-
+      // this.goto(500, 64 * 7 + 32)
       await this.costumesLoaded
       await this.soundsLoaded
 
+      this.hide()
+
+      this.set('moveSpeed', 100)
+
       forever(this, () => {
         if (E.mouseDown) {
-          if (E.mouseX > this.x + 48) {
-            this.x += R.delay * this.get('moveSpeed')
-            this.mirror(false)
+          if (E.mouseX > teamX + 48) {
+            teamX += R.delay * this.get('moveSpeed')
           } else {
-            this.x -= R.delay * this.get('moveSpeed')
-            this.mirror(true)
+            teamX -= R.delay * this.get('moveSpeed')
           }
-          this.set('animation', 1)
+          teamMove = true
         } else {
-          this.set('animation', 0)
+          teamMove = false
         }
       })
 
+      createCloneOfMySelf(this)
+      createCloneOfMySelf(this)
+      createCloneOfMySelf(this)
+      createCloneOfMySelf(this)
+    })
+
+    this.whenIStartAsAClone(() => {
+      this.set('order', team.length)
+      team.push({})
+
+      this.show()
+
+      this.set('animation', 0)
+
+      forever(this, () => {
+        this.goto(teamX - 100 * this.get('order'), teamY)
+      })
+
       foreverWait(this, async () => {
-        const animation = this.get('animation')
+        let animation = this.get('animation')
+
+        if (teamMove) animation = 1
+
         switch (animation) {
           case 0:
             this.switchCostumeTo('idle')
             break
           case 1:
             this.switchCostumeTo('walk1')
-            await repeatUntil(() => this.get('animation') !== 1, async () => {
+            await repeatUntil(() => teamMove === false, async () => {
               await waitSeconds(0.25)
               if (this.currentCostume !== 'walk2') {
                 this.nextCostume()
@@ -83,7 +104,9 @@ setup(function () {
     collisionRect(this, 0, 0, 64, 64)
 
     whenGameStart(this, async () => {
+      this.hide()
       await this.costumesLoaded
+
       let i = 0
       groundType = 'grass'
       while (i < 20) {
@@ -91,31 +114,30 @@ setup(function () {
         createCloneOfMySelf(this)
         i++
       }
+
       groundType = 'ground'
       let j = 10
-      i = 0
-      while (i < 20) {
-        groundX = i * 64
-        groundY = j * 64
-        createCloneOfMySelf(this)
-        i++
+      while (j < 12) {
+        i = 0
+        while (i < 20) {
+          groundX = i * 64
+          groundY = j * 64
+          createCloneOfMySelf(this)
+          i++
+        }
+        j++
       }
-      j++
+    })
+
+    this.whenIStartAsAClone(() => {
+      this.show()
+      this.switchCostumeTo(groundType)
+      noStroke()
+      this.goto(groundX, groundY)
     })
 
     this.draw(() => {
       drawCostume(this)
-    })
-
-    whenKeyPressed(this, 'KeyS', () => {
-      console.log('new')
-      createCloneOfMySelf(this)
-    })
-
-    this.whenIStartAsAClone(() => {
-      this.switchCostumeTo(groundType)
-      noStroke()
-      this.goto(groundX, groundY)
     })
   })
 
