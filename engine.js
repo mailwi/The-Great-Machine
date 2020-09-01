@@ -163,7 +163,7 @@ class Engine {
     clone.currentCostume = sprite.currentCostume
     clone.currentCostumeNumber = sprite.currentCostumeNumber
     clone.currentCostumeData = sprite.currentCostumeData
-    clone.show = sprite.show
+    clone.visible = sprite.visible
     clone.costumesLoaded = true
     clone.costumeMirror = sprite.costumeMirror
 
@@ -259,7 +259,7 @@ class Sprite {
     this.currentCostume = ''
     this.currentCostumeNumber = 0
     this.currentCostumeData = null
-    this.show = true
+    this.visible = true
     this.costumesLoaded = null
     this.costumeMirror = false
 
@@ -322,11 +322,11 @@ class Sprite {
   }
 
   show () {
-    this.show = true
+    this.visible = true
   }
 
   hide () {
-    this.show = false
+    this.visible = false
   }
 
   draw (code) {

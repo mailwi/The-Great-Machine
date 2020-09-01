@@ -243,6 +243,8 @@ class Render {
   }
 
   drawCostume (sprite) {
+    if (!sprite.visible) return
+
     let costume
     if (sprite.currentCostume) {
       costume = sprite.costumes[sprite.currentCostume]
@@ -364,8 +366,13 @@ class Render {
     }
 
     for (let i = 0; i < this.collisionShapes.length; i++) {
+      const collisionShape = this.collisionShapes[i]
       for (let j = i + 1; j < this.collisionShapes.length; j++) {
-        if (this.collisionShapes[i]) this.collisionShapes[i].eval(this.collisionShapes[j])
+        const otherCollisionShape = this.collisionShapes[j]
+        if (collisionShape && collisionShape.sprite.visible &&
+          otherCollisionShape && otherCollisionShape.sprite.visible) {
+          collisionShape.eval(otherCollisionShape)
+        }
       }
     }
   }
