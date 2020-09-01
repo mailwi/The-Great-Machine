@@ -1,24 +1,31 @@
 setup(function () {
-  R.seeCollisions = false
+  R.seeCollisions = true
 
   let teamX = 500
-  let teamY = 64 * 7 + 32
+
+  const teamScreenX = 500
+  const teamScreenY = 576
+
   let teamMove = false
 
   const team = []
 
+  function setCamera (sprite) {
+    sprite.x = sprite.get('x') - teamX
+  }
+
   createSprite('Char', function () {
     addCostumes(this, [
-      { name: 'idle', data: 'images/platformChar_idle.png' },
-      { name: 'walk1', data: 'images/platformChar_walk1.png' },
-      { name: 'walk2', data: 'images/platformChar_walk2.png' }
+      { name: 'idle', data: 'images/platformChar_idle.png', offsetX: 48, offsetY: -96 },
+      { name: 'walk1', data: 'images/platformChar_walk1.png', offsetX: 48, offsetY: -96 },
+      { name: 'walk2', data: 'images/platformChar_walk2.png', offsetX: 48, offsetY: -96 }
     ])
 
     addSounds(this, {
       shoot: 'sounds/bow.ogg'
     })
 
-    collisionRect(this, 25, 32, 50, 50)
+    collisionRect(this, 64, -64, 64, 56)
 
     whenGameStart(this, async () => {
       // this.goto(500, 64 * 7 + 32)
@@ -31,7 +38,7 @@ setup(function () {
 
       forever(this, () => {
         if (E.mouseDown) {
-          if (E.mouseX > teamX + 48) {
+          if (E.mouseX > teamScreenX + 96) {
             teamX += R.delay * this.get('moveSpeed')
           } else {
             teamX -= R.delay * this.get('moveSpeed')
@@ -56,9 +63,7 @@ setup(function () {
 
       this.set('animation', 0)
 
-      forever(this, () => {
-        this.goto(teamX - 100 * this.get('order'), teamY)
-      })
+      this.goto(teamScreenX - 150 * this.get('order'), teamScreenY)
 
       foreverWait(this, async () => {
         let animation = this.get('animation')
@@ -132,8 +137,13 @@ setup(function () {
     this.whenIStartAsAClone(() => {
       this.show()
       this.switchCostumeTo(groundType)
-      noStroke()
-      this.goto(groundX, groundY)
+
+      this.set('x', groundX)
+      this.y = groundY
+
+      forever(this, () => {
+        setCamera(this)
+      })
     })
 
     this.draw(() => {
@@ -143,8 +153,8 @@ setup(function () {
 
   createSprite('OpenObject', function () {
     addCostumes(this, [
-      {name: 'chest', data: 'images/shoot.png'},
-      {name: 'chest1', data: 'images/platformPack_tile004.png'}
+      { name: 'chest', data: 'images/shoot.png' },
+      { name: 'chest1', data: 'images/platformPack_tile004.png' }
     ])
 
     collisionRect(this, 0, 0, 64, 64)
@@ -156,15 +166,15 @@ setup(function () {
       this.goto(704, 512)
     })
 
-    this.whenThisSpriteClicked(()  => {
-      if (touching(this, 'Char')){
+    this.whenThisSpriteClicked(() => {
+      if (touching(this, 'Char')) {
         this.set('collect', 1)
       }
     })
-    
+
     foreverWait(this, async () => {
       const collect = this.get('collect')
-      switch(collect) {
+      switch (collect) {
         case 0:
           this.switchCostumeTo('chest')
           break
@@ -177,5 +187,4 @@ setup(function () {
       drawCostume(this)
     })
   })
-
 })
