@@ -98,18 +98,21 @@ class Render {
   resize () {
     const dpi = window.devicePixelRatio
 
-    const height = window.innerWidth * rc
-    if (height > window.innerHeight) {
-      const w = Math.floor(window.innerHeight / rc * dpi)
+    const dpiWidth = window.innerWidth * dpi
+    const dpiHeight = window.innerHeight * dpi
+
+    const height = dpiWidth * rc
+    if (height > dpiHeight) {
+      const w = Math.floor(dpiHeight / rc)
 
       this.canvas.width = w
-      this.canvas.height = Math.floor(window.innerHeight * dpi)
+      this.canvas.height = Math.floor(dpiHeight)
       this.sc = w / displayWidth
     } else {
-      const w = Math.floor(window.innerWidth * dpi)
+      const w = Math.floor(dpiWidth)
 
       this.canvas.width = w
-      this.canvas.height = Math.floor(height * dpi)
+      this.canvas.height = Math.floor(height)
       this.sc = w / displayWidth
     }
   }
@@ -265,8 +268,8 @@ class Render {
 
     this.prerenderContext.drawImage(sprite.currentCostumeData, 0, 0, width, height)
 
-    let x = Math.round((sprite.x + costume.offsetX) * this.sc)
-    let y = Math.round((sprite.y + costume.offsetY) * this.sc)
+    const x = Math.round((sprite.x + costume.offsetX) * this.sc)
+    const y = Math.round((sprite.y + costume.offsetY) * this.sc)
 
     this.context.drawImage(this.prerenderCanvas, x, y)
   }
