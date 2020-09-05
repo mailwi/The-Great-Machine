@@ -112,28 +112,35 @@ class Render {
       this.canvas.height = Math.floor(height)
       this.sc = w / displayWidth
     }
+
+    this.oldTimeStamp = Date.now() - 1000
   }
 
   gameLoop () {
     const timeStamp = Date.now()
 
-    this.delay = (timeStamp - this.oldTimeStamp) / 1000
-    this.oldTimeStamp = timeStamp
+    const delay = (timeStamp - this.oldTimeStamp) / 1000
+    const fps = Math.round(1 / delay)
 
-    this.fps = Math.round(1 / this.delay)
+    if (fps < 31) {
+      this.delay = delay
+      this.oldTimeStamp = timeStamp
 
-    if (this.engine.countToTrash > 50) {
-      this.layersToTrash()
-      this.collisionsToTrash()
+      this.fps = Math.round(1 / this.delay)
+
+      if (this.engine.countToTrash > 50) {
+        this.layersToTrash()
+        this.collisionsToTrash()
+      }
+
+      this.collisionsLoop()
+
+      this.engine.gameLoop()
+
+      this.clear()
+      this.layersLoop()
+      this.drawCollisions()
     }
-
-    this.collisionsLoop()
-
-    this.engine.gameLoop()
-
-    this.clear()
-    this.layersLoop()
-    this.drawCollisions()
 
     window.requestAnimationFrame(this.gameLoopFunc)
   }
@@ -142,6 +149,8 @@ class Render {
 
   clear () {
     this.context.clearRect(0, 0, this.canvas.width, this.canvas.height)
+    this.context.setTransform(1, 0, 0, 1, 0, 0)
+    this.context.lineWidth = this.sc
   }
 
   fill (color) {
@@ -229,7 +238,7 @@ class Render {
       sprite.costumesOrder.push(costume.name)
 
       if (sprite.currentCostumeData === null) {
-        sprite.currentCostume = name
+        sprite.currentCostume = costume.name
         sprite.currentCostumeNumber = i + 1
         sprite.currentCostumeData = image
       }
@@ -267,8 +276,8 @@ class Render {
 
     this.prerenderContext.drawImage(sprite.currentCostumeData, 0, 0, width, height)
 
-    const x = Math.round((sprite.x + costume.offsetX) * this.sc)
-    const y = Math.round((sprite.y + costume.offsetY) * this.sc)
+    const x = Math.round((sprite.x + sprite.drawX + costume.offsetX) * this.sc)
+    const y = Math.round((sprite.y + sprite.drawY + costume.offsetY) * this.sc)
 
     this.context.drawImage(this.prerenderCanvas, x, y)
   }
@@ -330,7 +339,7 @@ class Render {
 
     for (let i = 0; i < this.layers.length; i++) {
       const sprite = this.layers[i]
-      if (sprite && sprite.drawSprite) {
+      if (sprite && sprite.drawSprite && sprite.visible) {
         sprite.drawSprite()
       }
     }
@@ -353,11 +362,12 @@ class Render {
   }
 
   deleteFromCollisions (sprite) {
-    console.log('>', sprite.collisionShape)
-    sprite.collisionShape.sprite = null
-    const indexShape = this.collisionShapes.indexOf(sprite.collisionShape)
-    this.collisionShapes[indexShape] = null
-    sprite.collisionShape = null
+    if (sprite.collisionShape) {
+      sprite.collisionShape.sprite = null
+      const indexShape = this.collisionShapes.indexOf(sprite.collisionShape)
+      this.collisionShapes[indexShape] = null
+      sprite.collisionShape = null
+    }
   }
 
   collisionsLoop () {
@@ -380,14 +390,18 @@ class Render {
   drawCollisions () {
     if (this.seeCollisions) {
       for (let i = 0; i < this.collisionShapes.length; i++) {
+        this.stroke('black')
         this.fill('rgba(255, 0, 0, 0.25)')
 
         const collisionShape = this.collisionShapes[i]
         if (collisionShape instanceof CollisionRect) {
-          this.rect(collisionShape.sprite.x + collisionShape.x, collisionShape.sprite.y + collisionShape.y, collisionShape.w, collisionShape.h)
+          this.rect(collisionShape.sprite.x + collisionShape.sprite.drawX + collisionShape.x, collisionShape.sprite.y + collisionShape.sprite.drawY + collisionShape.y, collisionShape.w, collisionShape.h)
         } else if (collisionShape instanceof CollisionPoint) {
-          this.rect(collisionShape.sprite.x + collisionShape.x - 2, collisionShape.sprite.y + collisionShape.y - 2, 4, 4)
+          this.rect(collisionShape.sprite.x + collisionShape.sprite.drawX + collisionShape.x - 2, collisionShape.sprite.y + collisionShape.sprite.drawY + collisionShape.y - 2, 4, 4)
         }
+
+        font(12, 'Arial')
+        if (collisionShape) text(collisionShape.sprite.name, collisionShape.sprite.x + collisionShape.sprite.drawX + collisionShape.x - 2, collisionShape.sprite.y + collisionShape.sprite.drawY + collisionShape.y - 10)
       }
     }
   }
@@ -478,9 +492,9 @@ class CollisionPoint extends CollisionShape {
 
   eval (collisionShape) {
     if (collisionShape instanceof CollisionRect) {
-      if (this.pointRect(this.sprite.x + this.x, this.sprite.y + this.y,
-        collisionShape.sprite.x + collisionShape.x,
-        collisionShape.sprite.y + collisionShape.y,
+      if (this.pointRect(this.sprite.x + this.sprite.drawX + this.x, this.sprite.y + this.sprite.drawY + this.y,
+        collisionShape.sprite.x + collisionShape.sprite.drawX + collisionShape.x,
+        collisionShape.sprite.y + collisionShape.sprite.drawY + collisionShape.y,
         collisionShape.w, collisionShape.h)) {
         this.addCollidingShape(collisionShape.sprite.name, collisionShape)
         collisionShape.addCollidingShape(this.sprite.name, this)
@@ -501,17 +515,18 @@ class CollisionRect extends CollisionShape {
 
   eval (collisionShape) {
     if (collisionShape instanceof CollisionPoint) {
-      if (this.pointRect(collisionShape.sprite.x + collisionShape.x, collisionShape.sprite.y + collisionShape.y,
-        this.sprite.x + this.x,
-        this.sprite.y + this.y,
+      if (this.pointRect(collisionShape.sprite.x + collisionShape.sprite.drawX + collisionShape.x,
+        collisionShape.sprite.y + collisionShape.sprite.drawY + collisionShape.y,
+        this.sprite.x + this.sprite.drawX + this.x,
+        this.sprite.y + this.sprite.drawY + this.y,
         this.w, this.h)) {
         this.addCollidingShape(collisionShape.sprite.name, collisionShape)
         collisionShape.addCollidingShape(this.sprite.name, this)
       }
     } else if (collisionShape instanceof CollisionRect) {
-      if (this.rectRect(this.sprite.x + this.x, this.sprite.y + this.y, this.w, this.h,
-        collisionShape.sprite.x + collisionShape.x,
-        collisionShape.sprite.y + collisionShape.y,
+      if (this.rectRect(this.sprite.x + this.sprite.drawX + this.x, this.sprite.y + this.sprite.drawY + this.y, this.w, this.h,
+        collisionShape.sprite.x + collisionShape.sprite.drawX + collisionShape.x,
+        collisionShape.sprite.y + collisionShape.sprite.drawY + collisionShape.y,
         collisionShape.w, collisionShape.h)) {
         this.addCollidingShape(collisionShape.sprite.name, collisionShape)
         collisionShape.addCollidingShape(this.sprite.name, this)

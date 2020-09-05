@@ -90,6 +90,26 @@ function whenKeyPressed (sprite, keyCode, code) {
   E.whenKeyPressed(sprite, keyCode, code)
 }
 
+function broadcast (message) {
+  E.broadcast(message)
+}
+
+async function broadcastAndWait (message) {
+  await E.broadcastAndWait(message)
+}
+
+function whenIReceive (sprite, message, code) {
+  E.whenIReceive(sprite, message, code)
+}
+
+function unsubscribe (name, sprite, index = null) {
+  E.unsubscribe(name, sprite, index)
+}
+
+function beforeInit (code) {
+  E.beforeInit = code
+}
+
 /* draw functions */
 
 function translate (x, y) {

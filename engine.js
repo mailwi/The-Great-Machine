@@ -18,6 +18,8 @@ class Engine {
 
     this.setupFunc = null
 
+    this.beforeInit = null
+
     this.init()
   }
 
@@ -64,6 +66,8 @@ class Engine {
       }
     }
 
+    if (this.beforeInit) this.beforeInit()
+
     this.render.engineInit(this)
   }
 
@@ -92,10 +96,10 @@ class Engine {
     if ('foreverWait' in this.events) {
       const foreverWaitEvent = this.events.foreverWait
       for (let i = 0; i < foreverWaitEvent.length; i++) {
-        if (!foreverWaitEvent[i].wait) {
+        if (foreverWaitEvent[i] && !foreverWaitEvent[i].wait) {
           foreverWaitEvent[i].wait = true
           foreverWaitEvent[i].code().then(() => {
-            foreverWaitEvent[i].wait = false
+            if (foreverWaitEvent[i]) foreverWaitEvent[i].wait = false
             return true
           })
         }
@@ -117,7 +121,7 @@ class Engine {
         this.events[name][index] = null
         this.countToTrash++
       } else {
-        index = this.events[name].findIndex((spriteData) => spriteData.sprite === sprite)
+        index = this.events[name].findIndex((spriteData) => spriteData && spriteData.sprite === sprite)
         this.events[name][index] = null
         this.countToTrash++
       }
@@ -150,7 +154,7 @@ class Engine {
   /* clone functions */
 
   createCloneOf (caller, name) {
-    if (caller.clone) return
+    if (caller.clone && caller.name === name) return
     const sprite = this.sprites[name]
     const clone = new Sprite(name, sprite.code)
     clone.x = sprite.x
@@ -237,6 +241,28 @@ class Engine {
   whenKeyPressed (sprite, keyCode, code) {
     this.subscribe('whenKeyPressed', code, sprite, keyCode)
   }
+
+  broadcast (message) {
+    if (message in this.events) {
+      const messageEvent = this.events[message]
+      for (let i = 0; i < messageEvent.length; i++) {
+        if (messageEvent[i]) messageEvent[i].code()
+      }
+    }
+  }
+
+  async broadcastAndWait (message) {
+    if (message in this.events) {
+      const messageEvent = this.events[message]
+      for (let i = 0; i < messageEvent.length; i++) {
+        if (messageEvent[i]) await messageEvent[i].code()
+      }
+    }
+  }
+
+  whenIReceive (sprite, message, code) {
+    this.subscribe(message, code, sprite)
+  }
 }
 
 /* Sprite system */
@@ -247,7 +273,8 @@ class Sprite {
     this.code = code
     this.x = 0
     this.y = 0
-    this.z = 0
+    this.drawX = 0
+    this.drawY = 0
     this.size = 1
     this.direction = 0
     this.layer = null
@@ -308,9 +335,11 @@ class Sprite {
   }
 
   switchCostumeTo (name) {
-    this.currentCostume = name
-    this.currentCostumeNumber = this.costumes[name].index + 1
-    this.currentCostumeData = this.costumes[name].data
+    if (name !== this.currentCostume) {
+      this.currentCostume = name
+      this.currentCostumeNumber = this.costumes[name].index + 1
+      this.currentCostumeData = this.costumes[name].data
+    }
   }
 
   mirror (value) {
