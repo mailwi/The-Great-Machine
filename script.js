@@ -1,5 +1,5 @@
 setup(function () {
-  R.seeCollisions = true
+  R.seeCollisions = false
 
   const team = new BasicNode('team')
 
@@ -46,9 +46,14 @@ setup(function () {
   let fight = false
 
   let charQueue = 0
+  let charTarget = 0
+  let charKilledCount = 0
   let enemyQueue = 0
   let enemyTarget = 0
+  let enemyKilledCount = 0
   let charTurn = true
+
+  let lose = false
 
   const char = new SpriteNode({
     name: 'Char',
@@ -83,7 +88,6 @@ setup(function () {
           break
       }
     },
-    // collision: [72, -128, 64, 64],
     start () {
       team.local.index = 1
       team.addChild(char.clone())
@@ -99,7 +103,7 @@ setup(function () {
       const moveSpeed = 100
 
       forever(this, () => {
-        if (E.mouseDown && !fight) {
+        if (E.mouseDown && !fight && !lose) {
           if (E.mouseX > team.x + camera.offsetX) {
             team.x += R.delay * moveSpeed
             team.local.teamMove = true
@@ -140,19 +144,44 @@ setup(function () {
           this.switchCostumeTo(prefix + '_walk1')
           await waitSeconds(0.25)
           const oldX = this.x
-          this.x = 640
+          this.x = team.x + Math.round(Math.abs(team.x - enemiesNode.x) / 2)
           const targetObj = enemiesNode.local.stats[enemyTarget]
           targetObj.hp -= Math.round(teamObj[charQueue].damage * (1.15 - Math.random() * 0.3))
-          if (targetObj.hp < 0) targetObj.hp = 0
+          const enemiesLength = enemiesNode.getChildCount()
+          if (targetObj.hp <= 0) {
+            targetObj.hp = 0
+            enemiesNode.getChild(enemyTarget).sprite.hide()
+            enemyKilledCount++
+            if (enemyKilledCount < enemiesLength) {
+              enemyTarget = 0
+              while (enemiesNode.local.stats[enemyTarget].hp <= 0) {
+                enemyTarget++
+              }
+            }
+          }
           await waitSeconds(0.25)
           this.switchCostumeTo(prefix + '_idle')
           await waitSeconds(0.25)
           this.x = oldX
           this.local.attack = false
-          if (charQueue < team.getChildCount()) {
-            charQueue++
+          if (enemyKilledCount < enemiesLength) {
+            if (charQueue < team.getChildCount() - 1) {
+              charQueue++
+              while (charQueue < team.getChildCount() - 1 && teamObj[charQueue].hp <= 0) {
+                charQueue++
+              }
+              if (teamObj[charQueue].hp <= 0) {
+                charQueue = 0
+                charTurn = false
+                broadcast('enemy_attack')
+              }
+            } else {
+              charQueue = 0
+              charTurn = false
+              broadcast('enemy_attack')
+            }
           } else {
-            broadcast('enemyTurn')
+            broadcast('win')
           }
           break
         }
@@ -162,8 +191,16 @@ setup(function () {
       camera.add(this)
       this.local.index = team.local.index
       whenIReceive(this, 'char_attack', () => {
-        if (this.local.index === charQueue + 1) {
-          this.local.attack = true
+        if (teamObj[charQueue].hp > 0) {
+          if (this.local.index === charQueue + 1) {
+            this.local.attack = true
+          }
+        } else if (charQueue < team.getChildCount() - 1) {
+          charQueue++
+        } else {
+          charQueue = 0
+          charTurn = false
+          broadcast('enemy_attack')
         }
       })
     }
@@ -189,6 +226,8 @@ setup(function () {
 
       if (enemies.local.move) animation = 1
 
+      if (this.local.attack) animation = 2
+
       switch (animation) {
         case 0:
           this.switchCostumeTo(prefix + '_idle')
@@ -204,13 +243,76 @@ setup(function () {
             }
           })
           break
+        case 2: {
+          this.switchCostumeTo(prefix + '_walk1')
+          await waitSeconds(0.25)
+          const oldX = this.x
+          this.x = enemiesNode.x - Math.round(Math.abs(team.x - enemiesNode.x) / 2)
+          const targetObj = teamObj[charTarget]
+          const damage = Math.round(enemiesNode.local.stats[enemyQueue].damage * (1.15 - Math.random() * 0.3))
+          const absorbedDamage = Math.round(damage * (teamObj[0].damageAbsorption / 100))
+          if (teamObj[0].hp - absorbedDamage > 0) {
+            targetObj.hp -= Math.round(damage * ((100 - teamObj[0].damageAbsorption) / 100))
+            teamObj[0].hp -= absorbedDamage
+          } else {
+            targetObj.hp -= damage
+          }
+
+          if (targetObj.hp <= 0) {
+            targetObj.hp = 0
+            team.getChild(charTarget).sprite.hide()
+            charKilledCount++
+          }
+          await waitSeconds(1)
+          this.switchCostumeTo(prefix + '_idle')
+          await waitSeconds(0.25)
+          this.x = oldX
+          this.local.attack = false
+          if (charKilledCount < team.getChildCount()) {
+            if (enemyQueue < enemiesNode.getChildCount() - 1) {
+              enemyQueue++
+              broadcast('enemy_attack')
+            } else {
+              enemyQueue = 0
+
+              charQueue = 0
+              while (teamObj[charQueue].hp <= 0) {
+                charQueue++
+              }
+
+              charTurn = true
+            }
+          } else {
+            broadcast('lose')
+          }
+          break
+        }
       }
     },
     clone () {
       camera.add(this)
+
       this.whenThisSpriteClicked(() => {
-        if (fight) {
-          enemyTarget = this.local.index
+        if (fight && charTurn) {
+          enemyTarget = this.local.index - 1
+        }
+      })
+
+      whenIReceive(this, 'enemy_attack', () => {
+        if (this.local.index === enemyQueue + 1) {
+          if (enemiesNode.local.stats[enemyQueue].hp > 0) {
+            charTarget = Math.round(Math.random() * (team.getChildCount() - 1))
+            while (teamObj[charTarget].hp <= 0) {
+              charTarget = Math.round(Math.random() * (team.getChildCount() - 1))
+            }
+            this.local.attack = true
+          } else if (enemyQueue < enemiesNode.getChildCount() - 1) {
+            enemyQueue++
+            broadcast('enemy_attack')
+          } else {
+            enemyQueue = 0
+            charTurn = true
+          }
         }
       })
     }
@@ -252,62 +354,91 @@ setup(function () {
     start () {
       const icons = new BasicNode('icons')
       this.local.icons = icons
+      icon.clone(icons, {
+        type: 'attack',
+        f: () => {
+          if (charTurn) {
+            broadcast('char_attack')
+          }
+        }
+      })
+      icons.goto(500, 565)
+      icons.getChild(0).sprite.hide()
+
       whenIReceive(this, 'fight', () => {
+        charQueue = 0
+        charTarget = 0
+        charKilledCount = 0
+        enemyQueue = 0
+        enemyTarget = 0
+        enemyKilledCount = 0
         charQueue = 0
         enemyQueue = 0
         charTurn = true
         fight = true
-        icon.clone(icons, {
-          type: 'attack',
-          f: () => {
-            if (charTurn) {
-              broadcast('char_attack')
-            }
-          }
-        })
-        icons.goto(500, 565)
+        icons.getChild(0).sprite.show()
         this.show()
+      })
+
+      whenIReceive(this, 'win', () => {
+        fight = false
+        console.log('win')
+        icons.getChild(0).sprite.hide()
+        this.hide()
+      })
+
+      whenIReceive(this, 'lose', () => {
+        fight = false
+        console.log('lose')
+        lose = true
+        icons.getChild(0).sprite.hide()
+        this.hide()
       })
     },
     draw () {
       if (fight) {
         const char = team.getChild(charQueue)
         const charObj = teamObj[charQueue]
+        const targetCharObj = teamObj[charTarget]
         const enemy = enemiesNode.getChild(enemyQueue)
         const enemyObj = enemiesNode.local.stats[enemyQueue]
-        const targetObj = enemiesNode.local.stats[enemyTarget]
+        const targetEnemyObj = enemiesNode.local.stats[enemyTarget]
 
         fill('white')
         font(24, 'Arial')
-        text(charObj.name, 60, 600)
         if (charTurn) {
-          text(targetObj.name, 900, 600)
+          text(charObj.name, 60, 600)
+          text(targetEnemyObj.name, 900, 600)
         } else {
+          text(targetCharObj.name, 60, 600)
           text(enemyObj.name, 900, 600)
         }
         font(21, 'Arial')
-        text('Damage: ' + charObj.damage, 60, 675)
         if (charTurn) {
-          text('Damage: ' + targetObj.damage, 900, 675)
+          text('Damage: ' + charObj.damage, 60, 675)
+          text('Damage: ' + targetEnemyObj.damage, 900, 675)
         } else {
+          text('Damage: ' + targetCharObj.damage, 60, 675)
           text('Damage: ' + enemyObj.damage, 900, 675)
         }
         noStroke()
         rect(60, 615, 300, 25)
         rect(900, 615, 300, 25)
         fill('red')
-        rect(60, 615, 300 * (charObj.hp / charObj.maxHP), 25)
         if (charTurn) {
-          rect(900, 615, 300 * (targetObj.hp / targetObj.maxHP), 25)
+          rect(60, 615, 300 * (charObj.hp / charObj.maxHP), 25)
+          rect(900, 615, 300 * (targetEnemyObj.hp / targetEnemyObj.maxHP), 25)
         } else {
+          rect(60, 615, 300 * (targetCharObj.hp / targetCharObj.maxHP), 25)
           rect(900, 615, 300 * (enemyObj.hp / enemyObj.maxHP), 25)
         }
         fill('black')
         font(16, 'Arial')
-        text(charObj.hp + ' / ' + charObj.maxHP, 90, 632)
         if (charTurn) {
-          text(targetObj.hp + ' / ' + targetObj.maxHP, 930, 632)
+          text(charObj.hp + ' / ' + charObj.maxHP, 90, 632)
+          text(targetEnemyObj.hp + ' / ' + targetEnemyObj.maxHP, 930, 632)
         } else {
+          text(targetCharObj.hp + ' / ' + targetCharObj.maxHP, 90, 632)
           text(enemyObj.hp + ' / ' + enemyObj.maxHP, 930, 632)
         }
         if (charTurn) {
@@ -319,6 +450,9 @@ setup(function () {
         } else {
           fill('red')
           text('TURN', enemy.x + camera.offsetX - 25, 545)
+          fill('blue')
+          const target = team.getChild(charTarget)
+          text('Target', target.x + camera.offsetX - 25 + target.sprite.local.halfWidth, 545)
         }
       }
     }
@@ -365,7 +499,7 @@ setup(function () {
             enemies.local.stats.push(Object.assign({}, enemiesObj[enemyTypes[i]]))
             enemy.clone(enemies, {
               type: enemyTypes[i],
-              index: i
+              index: i + 1
             })
           }
 
@@ -375,7 +509,7 @@ setup(function () {
           forever(enemies, () => {
             if (team.x > enemies.x - 700) {
               enemies.local.move = true
-              enemies.x -= R.delay * 75
+              enemies.x -= R.delay * 150
               if (team.x > enemies.x - 500) {
                 enemies.local.move = false
                 unsubscribe('forever', enemies)
