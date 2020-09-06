@@ -87,9 +87,13 @@ setup(function () {
 
   let lose = false
 
+  let upgrading = false
+
+  let spares = 1000
+
   const char = new SpriteNode({
     name: 'Char',
-    layer: 1,
+    layer: 3,
     costumes: [
       { name: 'char1_idle', data: 'images/chars/char1_idle.png', offsetX: 0, offsetY: -225 },
       { name: 'char1_walk1', data: 'images/chars/char1_walk1.png', offsetX: 0, offsetY: -225 },
@@ -134,17 +138,26 @@ setup(function () {
 
       const moveSpeed = 100
 
-      forever(this, () => {
-        if (E.mouseDown && !fight && !lose) {
-          if (E.mouseX > team.x + camera.offsetX) {
-            team.x += R.delay * moveSpeed
-            team.local.teamMove = true
-          } else {
-            team.x -= R.delay * moveSpeed
-            team.local.teamMove = true
+      let moveDelay = false
+
+      foreverWait(this, async () => {
+        if (E.mouseDown) {
+          if (moveDelay && !fight && !lose && !upgrading) {
+            if (E.mouseX > team.x + camera.offsetX) {
+              team.x += R.delay * moveSpeed
+              team.local.teamMove = true
+            } else {
+              team.x -= R.delay * moveSpeed
+              team.local.teamMove = true
+            }
+            camera.update()
           }
-          camera.update()
+          if (!moveDelay) {
+            await waitSeconds(0.1)
+            moveDelay = true
+          }
         } else {
+          moveDelay = false
           team.local.teamMove = false
         }
       })
@@ -230,6 +243,8 @@ setup(function () {
             }
           } else {
             broadcast('win')
+            enemiesNode.local.data.killed = true
+            enemiesNode.deleteThis()
           }
           break
         }
@@ -263,7 +278,7 @@ setup(function () {
 
   const enemy = new SpriteNode({
     name: 'Enemy',
-    layer: 1,
+    layer: 3,
     costumes: [
       { name: 'meat_idle', data: 'images/enemies/meat_idle.png', offsetX: 0, offsetY: -175 },
       { name: 'meat_walk1', data: 'images/enemies/meat_walk1.png', offsetX: 0, offsetY: -175 },
@@ -326,10 +341,12 @@ setup(function () {
           this.switchCostumeTo(prefix + '_walk1')
           await repeatUntil(() => enemies.local.move === false, async () => {
             await waitSeconds(0.25)
-            if (this.currentCostume !== prefix + '_walk2') {
-              this.nextCostume()
-            } else {
-              this.switchCostumeTo(prefix + '_walk1')
+            if (!upgrading) {
+              if (this.currentCostume !== prefix + '_walk2') {
+                this.nextCostume()
+              } else {
+                this.switchCostumeTo(prefix + '_walk1')
+              }
             }
           })
           break
@@ -416,7 +433,7 @@ setup(function () {
     },
     draw () {
       noStroke()
-      fill('#eee')
+      fill('#999')
       rect(0, 0, 1280, 500)
       fill('#777')
       rect(0, 500, 1280, 720)
@@ -448,6 +465,7 @@ setup(function () {
       if (!fight && !lose) {
         const charObj = teamObj[selectedChar]
 
+        noStroke()
         fill('white')
         font(24, 'Arial')
         text(charObj.name, 60, 600)
@@ -460,6 +478,8 @@ setup(function () {
         rect(60, 615, 300, 25)
         fill('red')
         rect(60, 615, 300 * (charObj.hp / charObj.maxHP), 25)
+        fill('#fff')
+        text('Spares: ' + spares, 255, 600)
         fill('black')
         font(16, 'Arial')
         text(charObj.hp + ' / ' + charObj.maxHP, 90, 632)
@@ -484,6 +504,8 @@ setup(function () {
       icons.goto(500, 565)
       icons.getChild(0).sprite.hide()
 
+      this.local.win = false
+
       whenIReceive(this, 'fight', () => {
         charQueue = 0
         charTarget = 0
@@ -496,22 +518,30 @@ setup(function () {
         charTurn = true
         fight = true
         icons.getChild(0).sprite.show()
+        infoInterface.sprite.hide()
         this.show()
       })
 
-      whenIReceive(this, 'win', () => {
+      whenIReceive(this, 'win', async () => {
         fight = false
-        console.log('win')
         icons.getChild(0).sprite.hide()
+        infoInterface.sprite.show()
+        spares += enemiesNode.local.spares
+        this.local.i = 0
+        this.local.win = true
+        await repeatUntil(() => this.local.i === 500, async () => {
+          this.local.i++
+        })
+        delete this.local.i
+        this.local.win = false
         this.hide()
       })
 
       whenIReceive(this, 'lose', () => {
         fight = false
-        console.log('lose')
         lose = true
         icons.getChild(0).sprite.hide()
-        this.hide()
+        infoInterface.sprite.hide()
       })
     },
     draw () {
@@ -523,6 +553,7 @@ setup(function () {
         const enemyObj = enemiesNode.local.stats[enemyQueue]
         const targetEnemyObj = enemiesNode.local.stats[enemyTarget]
 
+        noStroke()
         fill('white')
         font(24, 'Arial')
         if (charTurn) {
@@ -574,6 +605,222 @@ setup(function () {
           text('Target', target.x + camera.offsetX - 25 + target.sprite.local.halfWidth, 545)
         }
       }
+
+      if (this.local.win) {
+        fill('green')
+        font(32, 'Arial')
+        text('+' + enemiesNode.local.spares + ' spares', 610, 360 - this.local.i / 10)
+      }
+
+      if (lose) {
+        fill('red')
+        font(64, 'Arial')
+        text('ROBOTS WERE DESTROYED!', 165, 100)
+      }
+    }
+  })
+
+  const door = new SpriteNode({
+    name: 'Door',
+    layer: 1,
+    costumes: [
+      { name: 'door', data: 'images/interact/door.png', offsetX: 0, offsetY: -192 },
+      { name: 'door_open', data: 'images/interact/door_open.png', offsetX: 0, offsetY: -192 },
+      { name: 'door_close', data: 'images/interact/door_close.png', offsetX: 0, offsetY: -192 }
+    ],
+    collision: [0, -192, 128, 192],
+    async wait () {
+      let animation = 0
+
+      if (touching(this, 'Char') && !fight) animation = 1
+
+      if (this.local.closed) animation = 2
+
+      switch (animation) {
+        case 0:
+          this.switchCostumeTo('door')
+          break
+        case 1:
+          this.switchCostumeTo('door_open')
+          break
+        case 2:
+          this.switchCostumeTo('door_close')
+          break
+      }
+    },
+    clone () {
+      camera.add(this)
+      this.whenThisSpriteClicked(() => {
+        if (touching(this, 'Char') && !fight) {
+          room.local.name = this.local.data.room
+          loadCurrentRoom()
+        }
+      })
+    }
+  })
+
+  const repair = new SpriteNode({
+    name: 'RepairStation',
+    layer: 1,
+    costumes: [
+      { name: 'repair_off', data: 'images/interact/repair_station.png', offsetX: 0, offsetY: -83 },
+      { name: 'repair_on', data: 'images/interact/repair_station_on.png', offsetX: 0, offsetY: -83 }
+    ],
+    collision: [0, -83, 125, 83],
+    async wait () {
+      let animation = 0
+
+      if (touching(this, 'Char') && !fight && spares > 0) animation = 1
+
+      switch (animation) {
+        case 0:
+          this.switchCostumeTo('repair_off')
+          break
+        case 1:
+          this.switchCostumeTo('repair_on')
+          break
+      }
+    },
+    clone () {
+      camera.add(this)
+      this.whenThisSpriteClicked(() => {
+        if (touching(this, 'Char') && !fight && spares > 0) {
+          const char = teamObj[selectedChar]
+          if (char.hp < char.maxHP) {
+            const needHP = Math.floor(char.maxHP - char.hp)
+            if (spares >= needHP) {
+              char.hp = char.maxHP
+              spares -= needHP
+            } else {
+              char.hp += Math.floor(spares)
+              spares = 0
+            }
+          }
+        }
+      })
+    },
+    draw () {
+      if (touching(this, 'Char') && !fight && spares > 0) {
+        const char = teamObj[selectedChar]
+        if (char.hp < char.maxHP) {
+          fill('red')
+        } else {
+          fill('#00ff00')
+        }
+        font(12, 'Arial')
+        text(char.name, this.x + camera.offsetX + 45, this.y + camera.offsetY - 5)
+      }
+    }
+  })
+
+  const btn = new SpriteNode({
+    name: 'btn',
+    layer: 1000,
+    collision () {
+      collisionRect(this, 0, 0, this.local.width || 96, this.local.height || 36)
+    },
+    clone () {
+      this.whenThisSpriteClicked(this.local.f)
+    },
+    draw () {
+      fill('#333')
+      rect(this.x, this.y, this.local.width || 96, this.local.height || 36)
+      fill('white')
+      font(18, 'Arial')
+      text(this.local.text, this.x + 5, this.y + (this.local.height || 36) / 2 + 5)
+    }
+  })
+
+  const upgrade = new SpriteNode({
+    name: 'UpgradeStation',
+    layer: 2,
+    costumes: [
+      { name: 'upgrade_off', data: 'images/interact/upgrade_station.png', offsetX: 0, offsetY: -83 },
+      { name: 'upgrade_on', data: 'images/interact/upgrade_station_on.png', offsetX: 0, offsetY: -83 }
+    ],
+    collision: [0, -83, 138, 83],
+    async wait () {
+      let animation = 0
+
+      if (touching(this, 'Char') && !fight && spares >= 0) animation = 1
+
+      switch (animation) {
+        case 0:
+          this.switchCostumeTo('upgrade_off')
+          break
+        case 1:
+          this.switchCostumeTo('upgrade_on')
+          break
+      }
+    },
+    start () {
+      const upgradeGUI = new BasicNode('upgradeGUI')
+      btn.clone(upgradeGUI, {
+        text: 'UPGRADE',
+        width: 100,
+        f () {
+          console.log('trust me')
+        }
+      })
+      btn.clone(upgradeGUI, {
+        text: 'UPGRADE',
+        width: 100,
+        f () {
+          console.log('trust me')
+        }
+      })
+      this.local.absorptionBtn = btn.clone(upgradeGUI, {
+        text: 'UPGRADE',
+        width: 100,
+        f () {
+          console.log('trust me')
+        }
+      })
+      btn.clone(upgradeGUI, {
+        text: 'Close',
+        width: 90,
+        f: () => {
+          upgrading = false
+          upgradeGUI.forEach(node => node.sprite.hide())
+        }
+      }).goto(15, -200)
+      upgradeGUI.forEach((node, index) => {
+        node.sprite.hide()
+        node.y += index * 45
+      })
+      upgradeGUI.goto(800, 95)
+      this.local.upgradeGUI = upgradeGUI
+    },
+    clone () {
+      camera.add(this)
+      upgrading = false
+      this.whenThisSpriteClicked(() => {
+        if (touching(this, 'Char') && !fight && spares >= 0) {
+          upgrading = true
+          this.local.upgradeGUI.forEach(node => node.sprite.show())
+        }
+      })
+    },
+    draw () {
+      if (upgrading) {
+        fill('#444')
+        stroke('black')
+        rect(350, 15, 570, 225)
+        fill('white')
+        noStroke()
+        font(32, 'Arial')
+        const selectedObj = teamObj[selectedChar]
+        text(selectedObj.name, 375, 75)
+        font(24, 'Arial')
+        text('MAX HP: ' + selectedObj.maxHP, 375, 125)
+        text('DAMAGE: ' + selectedObj.damage, 375, 170)
+        if (selectedObj.damageAbsorption) {
+          this.local.absorptionBtn.sprite.show()
+          text('ABSORPTION: ' + selectedObj.damageAbsorption, 375, 215)
+        } else {
+          this.local.absorptionBtn.sprite.hide()
+        }
+      }
     }
   })
 
@@ -582,15 +829,18 @@ setup(function () {
       teamX: 0,
       teamY: 560,
       data: [
-        { name: 'enemy', type: ['umbrella', 'umbrella', 'umbrella'], x: 950, y: 560 }
+        { name: 'upgrade', x: 250, y: 500 },
+        { name: 'door', x: 100, y: 535, room: 'two' },
+        // { name: 'repair', x: 250, y: 500 },
+        { name: 'enemy', type: ['meat', 'meat', 'umbrella'], x: 950, y: 560 }
       ]
     },
     two: {
       teamX: 0,
       teamY: 560,
       data: [
-        { name: 'Decoration', type: 'grass', x: 250, y: 500 },
-        { name: 'Door', x: 25, y: 560, room: 'start', closed: true }
+        { name: 'door', x: 10, y: 535, room: 'start' },
+        { name: 'enemy', type: ['meat'], x: 300, y: 560 }
       ]
     }
   }
@@ -599,6 +849,7 @@ setup(function () {
   room.local.name = 'start'
 
   function loadCurrentRoom () {
+    room.removeDeepSprites()
     const roomInfo = rooms[room.local.name]
 
     team.goto(roomInfo.teamX || 0, roomInfo.teamY || 560)
@@ -606,38 +857,70 @@ setup(function () {
     const data = roomInfo.data
     for (let i = 0; i < data.length; i++) {
       switch (data[i].name) {
-        case 'enemy': {
-          const enemies = new BasicNode('enemies')
-          enemies.local.move = false
-          room.addChild(enemies)
-
-          enemies.local.stats = []
-
-          const enemyTypes = data[i].type
-          for (let i = 0; i < enemyTypes.length; i++) {
-            enemies.local.stats.push(Object.assign({}, enemiesObj[enemyTypes[i]]))
-            enemy.clone(enemies, {
-              type: enemyTypes[i],
-              index: i + 1
-            })
-          }
-
-          enemies.forEach((enemy, index) => { enemy.x += index * 150 })
-
-          enemies.goto(data[i].x, data[i].y)
-          forever(enemies, () => {
-            if (team.x > enemies.x - 700) {
-              enemies.local.move = true
-              enemies.x -= R.delay * 150
-              if (team.x > enemies.x - 450) {
-                enemies.local.move = false
-                unsubscribe('forever', enemies)
-                enemiesNode = enemies
-                broadcast('fight')
-              }
-            }
+        case 'repair': {
+          const repairClone = repair.clone(room, {
+            data: data[i]
           })
+          repairClone.goto(data[i].x, data[i].y)
+          room.addChild(repairClone)
           break
+        }
+        case 'upgrade': {
+          const upgradeClone = upgrade.clone(room, {
+            data: data[i]
+          })
+          upgradeClone.goto(data[i].x, data[i].y)
+          room.addChild(upgradeClone)
+          break
+        }
+        case 'door': {
+          const doorClone = door.clone(room, {
+            data: data[i],
+            open: false,
+            closed: data[i].closed
+          })
+          doorClone.goto(data[i].x, data[i].y)
+          room.addChild(doorClone)
+          break
+        }
+        case 'enemy': {
+          if (!data[i].killed) {
+            const enemies = new BasicNode('enemies')
+            enemies.local.move = false
+            room.addChild(enemies)
+
+            enemies.local.data = data[i]
+            enemies.local.stats = []
+            enemies.local.spares = 0
+
+            const enemyTypes = data[i].type
+            for (let i = 0; i < enemyTypes.length; i++) {
+              enemies.local.stats.push(Object.assign({}, enemiesObj[enemyTypes[i]]))
+              enemy.clone(enemies, {
+                type: enemyTypes[i],
+                index: i + 1
+              })
+              const obj = enemiesObj[enemyTypes[i]]
+              enemies.local.spares += Math.round((obj.maxHP + obj.damage * 2.5 + (obj.damageAbsorption ? obj.damageAbsorption * 3 : 0)) / 5)
+            }
+
+            enemies.forEach((enemy, index) => { enemy.x += index * 150 })
+
+            enemies.goto(data[i].x, data[i].y)
+            forever(enemies, () => {
+              if (team.x > enemies.x - 700 && !fight && !upgrading) {
+                enemies.local.move = true
+                enemies.x -= R.delay * 150
+                if (team.x > enemies.x - 450 && !fight && !upgrading) {
+                  enemies.local.move = false
+                  unsubscribe('forever', enemies)
+                  enemiesNode = enemies
+                  broadcast('fight')
+                }
+              }
+            })
+            break
+          }
         }
       }
     }

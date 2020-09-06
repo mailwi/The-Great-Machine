@@ -422,14 +422,22 @@ class Render {
       R.canvas.addEventListener('mouseup', _ => {
         if (this.collisionShape.colliding()) {
           const collidingShapes = this.collisionShape.collidingShapes
+          const sprites = []
+
           for (const name in collidingShapes) {
             const shapes = collidingShapes[name]
             for (let i = 0; i < shapes.length; i++) {
-              const sprite = shapes[i].sprite
-              if (sprite.whenThisSpriteClickedEvent) {
-                sprite.whenThisSpriteClickedEvent()
-              }
+              sprites.push(shapes[i].sprite)
             }
+          }
+
+          sprites.sort((a, b) => {
+            return b.layer - a.layer
+          })
+
+          const sprite = sprites[0]
+          if (sprite.whenThisSpriteClickedEvent) {
+            sprite.whenThisSpriteClickedEvent()
           }
         }
       })
