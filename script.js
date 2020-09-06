@@ -89,7 +89,7 @@ setup(function () {
 
   let upgrading = false
 
-  let spares = 1000
+  let spares = 0
 
   const char = new SpriteNode({
     name: 'Char',
@@ -411,19 +411,21 @@ setup(function () {
       })
 
       whenIReceive(this, 'enemy_attack', () => {
-        if (this.local.index === enemyQueue + 1) {
-          if (enemiesNode.local.stats[enemyQueue].hp > 0) {
-            charTarget = Math.round(Math.random() * (team.getChildCount() - 1))
-            while (teamObj[charTarget].hp <= 0) {
+        if (enemiesNode === this.node.parent) {
+          if (this.local.index === enemyQueue + 1) {
+            if (enemiesNode.local.stats[enemyQueue].hp > 0) {
               charTarget = Math.round(Math.random() * (team.getChildCount() - 1))
+              while (teamObj[charTarget].hp <= 0) {
+                charTarget = Math.round(Math.random() * (team.getChildCount() - 1))
+              }
+              this.local.attack = true
+            } else if (enemyQueue < enemiesNode.getChildCount() - 1) {
+              enemyQueue++
+              broadcast('enemy_attack')
+            } else {
+              enemyQueue = 0
+              charTurn = true
             }
-            this.local.attack = true
-          } else if (enemyQueue < enemiesNode.getChildCount() - 1) {
-            enemyQueue++
-            broadcast('enemy_attack')
-          } else {
-            enemyQueue = 0
-            charTurn = true
           }
         }
       })
@@ -880,18 +882,23 @@ setup(function () {
     }
   })
 
+  // meat, ghost, spider, turret, umbrella
   const rooms = {
     lvl1: {
       teamX: 0,
       teamY: 560,
       data: [
-        { name: 'upgrade', x: 250, y: 500 },
-        { name: 'door', x: 100, y: 535, room: 'two' },
-        { name: 'decoration', type: 'bank1', x: 150, y: 535 },
+        // { name: 'upgrade', x: 250, y: 500 },
+        // { name: 'door', x: 100, y: 535, room: 'two' },
+        { name: 'decoration', type: 'bank1', x: 250, y: 360 },
         // { name: 'repair', x: 250, y: 500 },
-        { name: 'enemy', type: ['meat', 'meat', 'umbrella'], x: 950, y: 560 }
+        // { name: 'enemy', type: ['meat'], x: 950, y: 560 },
+        // { name: 'enemy', type: ['meat', 'meat'], x: 1250, y: 560 },
+        { name: 'enemy', type: ['meat', 'spider'], x: 550, y: 560 },
+        { name: 'enemy', type: ['meat', 'meat'], x: 1250, y: 560 }
+        // { name: 'enemy', type: ['ghost', 'ghost'], x: 2650, y: 560 }
       ],
-      max: 300,
+      max: 2100,
       maxGoto: 'two'
     },
     two: {
