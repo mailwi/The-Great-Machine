@@ -249,41 +249,49 @@ setup(function () {
     name: 'Enemy',
     layer: 1,
     costumes: [
-      { name: 'meat_idle', data: 'images/enemies/meat_idle.png', offsetX: 48, offsetY: -175 },
-      { name: 'meat_walk1', data: 'images/enemies/meat_walk1.png', offsetX: 48, offsetY: -175 },
-      { name: 'meat_walk2', data: 'images/enemies/meat_walk2.png', offsetX: 48, offsetY: -175 },
-      { name: 'ghost_idle', data: 'images/enemies/ghost_idle.png', offsetX: 48, offsetY: -190 },
-      { name: 'ghost_walk1', data: 'images/enemies/ghost_walk1.png', offsetX: 48, offsetY: -190 },
-      { name: 'ghost_walk2', data: 'images/enemies/ghost_walk2.png', offsetX: 48, offsetY: -190 },
-      { name: 'spider_idle', data: 'images/enemies/spider_idle.png', offsetX: 48, offsetY: -140 },
-      { name: 'spider_walk1', data: 'images/enemies/spider_walk1.png', offsetX: 48, offsetY: -140 },
-      { name: 'spider_walk2', data: 'images/enemies/spider_walk2.png', offsetX: 48, offsetY: -140 },
-      { name: 'turret_idle', data: 'images/enemies/turret_idle.png', offsetX: 48, offsetY: -192 },
-      { name: 'turret_walk1', data: 'images/enemies/turret_walk1.png', offsetX: 48, offsetY: -192 },
-      { name: 'turret_walk2', data: 'images/enemies/turret_walk2.png', offsetX: 48, offsetY: -192 },
-      { name: 'umbrella_idle', data: 'images/enemies/umbrella_idle.png', offsetX: 48, offsetY: -192 },
-      { name: 'umbrella_walk1', data: 'images/enemies/umbrella_walk1.png', offsetX: 48, offsetY: -192 },
-      { name: 'umbrella_walk2', data: 'images/enemies/umbrella_walk2.png', offsetX: 48, offsetY: -192 }
+      { name: 'meat_idle', data: 'images/enemies/meat_idle.png', offsetX: 0, offsetY: -175 },
+      { name: 'meat_walk1', data: 'images/enemies/meat_walk1.png', offsetX: 0, offsetY: -175 },
+      { name: 'meat_walk2', data: 'images/enemies/meat_walk2.png', offsetX: 0, offsetY: -175 },
+      { name: 'ghost_idle', data: 'images/enemies/ghost_idle.png', offsetX: -65, offsetY: -190 },
+      { name: 'ghost_walk1', data: 'images/enemies/ghost_walk1.png', offsetX: -65, offsetY: -190 },
+      { name: 'ghost_walk2', data: 'images/enemies/ghost_walk2.png', offsetX: -65, offsetY: -190 },
+      { name: 'spider_idle', data: 'images/enemies/spider_idle.png', offsetX: -10, offsetY: -145 },
+      { name: 'spider_walk1', data: 'images/enemies/spider_walk1.png', offsetX: -10, offsetY: -145 },
+      { name: 'spider_walk2', data: 'images/enemies/spider_walk2.png', offsetX: -10, offsetY: -145 },
+      { name: 'turret_idle', data: 'images/enemies/turret_idle.png', offsetX: -65, offsetY: -192 },
+      { name: 'turret_walk1', data: 'images/enemies/turret_walk1.png', offsetX: -65, offsetY: -192 },
+      { name: 'turret_walk2', data: 'images/enemies/turret_walk2.png', offsetX: -65, offsetY: -192 },
+      { name: 'umbrella_idle', data: 'images/enemies/umbrella_idle.png', offsetX: -65, offsetY: -198 },
+      { name: 'umbrella_walk1', data: 'images/enemies/umbrella_walk1.png', offsetX: -65, offsetY: -198 },
+      { name: 'umbrella_walk2', data: 'images/enemies/umbrella_walk2.png', offsetX: -65, offsetY: -198 }
     ],
     sounds: {
       shoot: 'sounds/bow.ogg'
-    }, /*
+    },
     collision () {
-      switch (team.local.index) {
-        case 1:
-          collisionRect(this, 0, -225, 96, 225)
-          this.local.halfWidth = 48
-          break
-        case 2:
-          collisionRect(this, 0, -192, 64, 192)
+      switch (this.local.type) {
+        case 'meat':
+          collisionRect(this, 0, -175, 64, 175)
           this.local.halfWidth = 32
           break
-        case 3:
-          collisionRect(this, 0, -160, 100, 160)
-          this.local.halfWidth = 50
+        case 'ghost':
+          collisionRect(this, -50, -190, 150, 160)
+          this.local.halfWidth = 32
+          break
+        case 'spider':
+          collisionRect(this, -15, -150, 95, 160)
+          this.local.halfWidth = 36
+          break
+        case 'turret':
+          collisionRect(this, -70, -190, 165, 160)
+          this.local.halfWidth = 18
+          break
+        case 'umbrella':
+          collisionRect(this, -70, -195, 170, 195)
+          this.local.halfWidth = 20
           break
       }
-    }, */
+    },
     async wait () {
       const prefix = this.local.type
       const enemies = this.node.parent
@@ -541,10 +549,10 @@ setup(function () {
           text('TURN', char.x + camera.offsetX - 25 + char.sprite.local.halfWidth, 545)
           fill('red')
           const target = enemiesNode.getChild(enemyTarget)
-          text('Target', target.x + camera.offsetX - 25, 545)
+          text('Target', target.x + camera.offsetX - 25 + target.sprite.local.halfWidth, 545)
         } else {
           fill('red')
-          text('TURN', enemy.x + camera.offsetX - 25, 545)
+          text('TURN', enemy.x + camera.offsetX - 25 + enemy.sprite.local.halfWidth, 545)
           fill('blue')
           const target = team.getChild(charTarget)
           text('Target', target.x + camera.offsetX - 25 + target.sprite.local.halfWidth, 545)
@@ -558,7 +566,7 @@ setup(function () {
       teamX: 0,
       teamY: 560,
       data: [
-        { name: 'enemy', type: ['umbrella', 'umbrella', 'umbrella'], x: 950, y: 560 }
+        { name: 'enemy', type: ['meat', 'ghost', 'turret'], x: 950, y: 560 }
       ]
     },
     two: {
@@ -605,7 +613,7 @@ setup(function () {
             if (team.x > enemies.x - 700) {
               enemies.local.move = true
               enemies.x -= R.delay * 150
-              if (team.x > enemies.x - 500) {
+              if (team.x > enemies.x - 450) {
                 enemies.local.move = false
                 unsubscribe('forever', enemies)
                 enemiesNode = enemies
