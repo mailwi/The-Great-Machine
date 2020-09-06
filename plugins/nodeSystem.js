@@ -174,15 +174,19 @@ class SpriteNode extends BasicNode {
 
         if (spriteData.costumes) addCostumes(this, spriteData.costumes)
         if (spriteData.sounds) addSounds(this, spriteData.sounds)
-        if (this.clone && collision) {
-          if (collision instanceof Function) {
-            this.nodeCollision = collision
-            this.nodeCollision()
-          } else {
-            if (collision.length > 2) {
-              collisionRect(this, collision[0], collision[1], collision[2], collision[3])
+        if (this.clone) {
+          if (spriteData.data) this.local = spriteData.data
+
+          if (collision) {
+            if (collision instanceof Function) {
+              this.nodeCollision = collision
+              this.nodeCollision()
             } else {
-              collisionPoint(this, collision[0], collision[1])
+              if (collision.length > 2) {
+                collisionRect(this, collision[0], collision[1], collision[2], collision[3])
+              } else {
+                collisionPoint(this, collision[0], collision[1])
+              }
             }
           }
         }
@@ -212,7 +216,6 @@ class SpriteNode extends BasicNode {
           this.whenIStartAsAClone(() => {
             this.node = new SpriteNode({ name: this.name, clone: this }, true)
             if (spriteData.parent) spriteData.parent.addChild(this.node)
-            if (spriteData.data) this.local = spriteData.data
             this.show()
 
             if (spriteData.layer !== undefined) this.layer = spriteData.layer
