@@ -177,8 +177,24 @@ setup(function () {
           await waitSeconds(0.25)
           const oldX = this.x
           this.x = team.x + Math.round(Math.abs(team.x - enemiesNode.x) / 2)
+
           const targetObj = enemiesNode.local.stats[enemyTarget]
-          targetObj.hp -= Math.round(teamObj[charQueue].damage * (1.15 - Math.random() * 0.3))
+          const fullDamage = Math.round(teamObj[charQueue].damage * (1.15 - Math.random() * 0.3))
+          let damage = fullDamage
+
+          const stats = enemiesNode.local.stats
+          for (let i = 0; i < stats.length; i++) {
+            if (stats[i].damageAbsorption && stats[i] !== targetObj) {
+              const absorbedDamage = Math.round(fullDamage * (stats[i].damageAbsorption / 100))
+              if (stats[i].hp - absorbedDamage > 0) {
+                damage -= absorbedDamage
+                stats[i].hp -= absorbedDamage
+              }
+            }
+          }
+
+          targetObj.hp -= damage
+
           const enemiesLength = enemiesNode.getChildCount()
           if (targetObj.hp <= 0) {
             targetObj.hp = 0
@@ -429,7 +445,7 @@ setup(function () {
       this.show()
     },
     draw () {
-      if (!fight) {
+      if (!fight && !lose) {
         const charObj = teamObj[selectedChar]
 
         fill('white')
@@ -566,7 +582,7 @@ setup(function () {
       teamX: 0,
       teamY: 560,
       data: [
-        { name: 'enemy', type: ['meat', 'ghost', 'turret'], x: 950, y: 560 }
+        { name: 'enemy', type: ['umbrella', 'umbrella', 'umbrella'], x: 950, y: 560 }
       ]
     },
     two: {
