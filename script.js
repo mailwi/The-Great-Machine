@@ -144,9 +144,14 @@ setup(function () {
         if (E.mouseDown) {
           if (moveDelay && !fight && !lose && !upgrading) {
             if (E.mouseX > team.x + camera.offsetX) {
-              team.x += R.delay * moveSpeed
-              team.local.teamMove = true
-            } else {
+              if (team.x < (room.local.max || 99999)) {
+                team.x += R.delay * moveSpeed
+                team.local.teamMove = true
+              } else {
+                room.local.name = room.local.maxGoto
+                loadCurrentRoom()
+              }
+            } else if (team.x > 0) {
               team.x -= R.delay * moveSpeed
               team.local.teamMove = true
             }
@@ -428,17 +433,34 @@ setup(function () {
   const background = new SpriteNode({
     name: 'Background',
     layer: 0,
+    costumes: [
+      { name: 'lvl1', data: 'images/map/lvl1.png' },
+      { name: 'lvl2', data: 'images/map/lvl2.png' },
+      { name: 'lvl3', data: 'images/map/lvl3.png' },
+      { name: 'lvl4', data: 'images/map/lvl4.png' }
+    ],
     start () {
       this.show()
+      whenIReceive(this, 'new_room', () => {
+        if (room.local.name.indexOf('lvl') !== -1) {
+          this.switchCostumeTo(room.local.name)
+        }
+      })
     },
     draw () {
-      noStroke()
-      fill('#999')
-      rect(0, 0, 1280, 500)
-      fill('#777')
-      rect(0, 500, 1280, 720)
-      fill('#333')
-      rect(0, 550, 1280, 720)
+      if (room.local.name.indexOf('lvl') === -1) {
+        noStroke()
+        fill('black')
+        rect(0, 0, 1280, 200)
+        fill('#999')
+        rect(0, 200, 1280, 300)
+      }
+      if (room.local.name !== 'lvl3' && room.local.name !== 'lvl4') {
+        fill('#777')
+        rect(0, 500, 1280, 720)
+        fill('#333')
+        rect(0, 550, 1280, 720)
+      }
     }
   })
 
@@ -759,21 +781,37 @@ setup(function () {
         text: 'UPGRADE',
         width: 100,
         f () {
-          console.log('trust me')
+          const selectedObj = teamObj[selectedChar]
+          const cost = Math.round(selectedObj.maxHP / 2)
+          if (spares >= cost) {
+            spares -= cost
+            selectedObj.hp += 50
+            selectedObj.maxHP += 50
+          }
         }
       })
       btn.clone(upgradeGUI, {
         text: 'UPGRADE',
         width: 100,
         f () {
-          console.log('trust me')
+          const selectedObj = teamObj[selectedChar]
+          const cost = Math.round(selectedObj.damage * 2)
+          if (spares >= cost) {
+            spares -= cost
+            selectedObj.damage += 5
+          }
         }
       })
       this.local.absorptionBtn = btn.clone(upgradeGUI, {
         text: 'UPGRADE',
         width: 100,
         f () {
-          console.log('trust me')
+          const selectedObj = teamObj[selectedChar]
+          const cost = Math.round(selectedObj.damageAbsorption * 4)
+          if (spares >= cost) {
+            spares -= cost
+            selectedObj.damageAbsorption += 5
+          }
         }
       })
       btn.clone(upgradeGUI, {
@@ -812,11 +850,15 @@ setup(function () {
         const selectedObj = teamObj[selectedChar]
         text(selectedObj.name, 375, 75)
         font(24, 'Arial')
-        text('MAX HP: ' + selectedObj.maxHP, 375, 125)
-        text('DAMAGE: ' + selectedObj.damage, 375, 170)
+        text('MAX HP: ' + selectedObj.maxHP + '   Cost: ' + Math.round(selectedObj.maxHP / 2), 375, 125)
+        text('DAMAGE: ' + selectedObj.damage + '    Cost: ' + Math.round(selectedObj.damage * 2), 375, 170)
         if (selectedObj.damageAbsorption) {
-          this.local.absorptionBtn.sprite.show()
-          text('ABSORPTION: ' + selectedObj.damageAbsorption, 375, 215)
+          if (selectedObj.damageAbsorption < 50) {
+            this.local.absorptionBtn.sprite.show()
+          } else {
+            this.local.absorptionBtn.sprite.hide()
+          }
+          text('ABSORPTION: ' + selectedObj.damageAbsorption + '   Cost: ' + Math.round(selectedObj.damageAbsorption * 4), 375, 215)
         } else {
           this.local.absorptionBtn.sprite.hide()
         }
@@ -824,39 +866,69 @@ setup(function () {
     }
   })
 
+  const decoration = new SpriteNode({
+    name: 'Decoration',
+    layer: 1,
+    costumes: [
+      { name: 'bank1', data: 'images/map/bank1.png', offsetX: 0, offsetY: 0 },
+      { name: 'bank2', data: 'images/map/bank2.png', offsetX: 0, offsetY: 0 },
+      { name: 'bank3', data: 'images/map/bank3.png', offsetX: 0, offsetY: 0 }
+    ],
+    clone () {
+      camera.add(this)
+      this.switchCostumeTo(this.local.type)
+    }
+  })
+
   const rooms = {
-    start: {
+    lvl1: {
       teamX: 0,
       teamY: 560,
       data: [
         { name: 'upgrade', x: 250, y: 500 },
         { name: 'door', x: 100, y: 535, room: 'two' },
+        { name: 'decoration', type: 'bank1', x: 150, y: 535 },
         // { name: 'repair', x: 250, y: 500 },
         { name: 'enemy', type: ['meat', 'meat', 'umbrella'], x: 950, y: 560 }
-      ]
+      ],
+      max: 300,
+      maxGoto: 'two'
     },
     two: {
       teamX: 0,
       teamY: 560,
       data: [
-        { name: 'door', x: 10, y: 535, room: 'start' },
+        { name: 'door', x: 10, y: 535, room: 'lvl1' },
         { name: 'enemy', type: ['meat'], x: 300, y: 560 }
-      ]
+      ],
+      max: 300
     }
   }
 
   const room = new BasicNode('room')
-  room.local.name = 'start'
+  room.local.name = 'lvl1'
 
   function loadCurrentRoom () {
     room.removeDeepSprites()
     const roomInfo = rooms[room.local.name]
+
+    room.local.max = roomInfo.max
+    room.local.maxGoto = roomInfo.maxGoto
 
     team.goto(roomInfo.teamX || 0, roomInfo.teamY || 560)
 
     const data = roomInfo.data
     for (let i = 0; i < data.length; i++) {
       switch (data[i].name) {
+        case 'decoration': {
+          const decorationClone = decoration.clone(room, {
+            data: data[i],
+            type: data[i].type
+          })
+          decorationClone.goto(data[i].x, data[i].y)
+          room.addChild(decorationClone)
+          break
+        }
         case 'repair': {
           const repairClone = repair.clone(room, {
             data: data[i]
@@ -924,6 +996,8 @@ setup(function () {
         }
       }
     }
+
+    broadcast('new_room')
 
     camera.update()
   }
