@@ -34,12 +34,42 @@ setup(function () {
   let enemiesNode = null
 
   const enemiesObj = {
-    engineer: {
-      name: 'Engineer',
-      type: 'engineer',
-      hp: 100,
-      maxHP: 100,
-      damage: 25
+    meat: {
+      name: 'Meat',
+      type: 'meat',
+      hp: 50,
+      maxHP: 50,
+      damage: 15
+    },
+    ghost: {
+      name: 'Ghost',
+      type: 'ghost',
+      hp: 65,
+      maxHP: 65,
+      damage: 30
+    },
+    spider: {
+      name: 'Spider',
+      type: 'spider',
+      hp: 200,
+      maxHP: 200,
+      damage: 15,
+      damageAbsorption: 10
+    },
+    turret: {
+      name: 'Turret',
+      type: 'turret',
+      hp: 40,
+      maxHP: 40,
+      damage: 55
+    },
+    umbrella: {
+      name: 'Umbrella',
+      type: 'umbrella',
+      hp: 250,
+      maxHP: 250,
+      damage: 30,
+      damageAbsorption: 25
     }
   }
 
@@ -210,14 +240,41 @@ setup(function () {
     name: 'Enemy',
     layer: 1,
     costumes: [
-      { name: 'engineer_idle', data: 'images/enemies/engineer_idle.png', offsetX: 48, offsetY: -192 },
-      { name: 'engineer_walk1', data: 'images/enemies/engineer_walk1.png', offsetX: 48, offsetY: -192 },
-      { name: 'engineer_walk2', data: 'images/enemies/engineer_walk2.png', offsetX: 48, offsetY: -192 }
+      { name: 'meat_idle', data: 'images/enemies/meat_idle.png', offsetX: 48, offsetY: -175 },
+      { name: 'meat_walk1', data: 'images/enemies/meat_walk1.png', offsetX: 48, offsetY: -175 },
+      { name: 'meat_walk2', data: 'images/enemies/meat_walk2.png', offsetX: 48, offsetY: -175 },
+      { name: 'ghost_idle', data: 'images/enemies/ghost_idle.png', offsetX: 48, offsetY: -190 },
+      { name: 'ghost_walk1', data: 'images/enemies/ghost_walk1.png', offsetX: 48, offsetY: -190 },
+      { name: 'ghost_walk2', data: 'images/enemies/ghost_walk2.png', offsetX: 48, offsetY: -190 },
+      { name: 'spider_idle', data: 'images/enemies/spider_idle.png', offsetX: 48, offsetY: -140 },
+      { name: 'spider_walk1', data: 'images/enemies/spider_walk1.png', offsetX: 48, offsetY: -140 },
+      { name: 'spider_walk2', data: 'images/enemies/spider_walk2.png', offsetX: 48, offsetY: -140 },
+      { name: 'turret_idle', data: 'images/enemies/turret_idle.png', offsetX: 48, offsetY: -192 },
+      { name: 'turret_walk1', data: 'images/enemies/turret_walk1.png', offsetX: 48, offsetY: -192 },
+      { name: 'turret_walk2', data: 'images/enemies/turret_walk2.png', offsetX: 48, offsetY: -192 },
+      { name: 'umbrella_idle', data: 'images/enemies/umbrella_idle.png', offsetX: 48, offsetY: -192 },
+      { name: 'umbrella_walk1', data: 'images/enemies/umbrella_walk1.png', offsetX: 48, offsetY: -192 },
+      { name: 'umbrella_walk2', data: 'images/enemies/umbrella_walk2.png', offsetX: 48, offsetY: -192 }
     ],
     sounds: {
       shoot: 'sounds/bow.ogg'
-    },
-    collision: [36, -128, 64, 64],
+    }, /*
+    collision () {
+      switch (team.local.index) {
+        case 1:
+          collisionRect(this, 0, -225, 96, 225)
+          this.local.halfWidth = 48
+          break
+        case 2:
+          collisionRect(this, 0, -192, 64, 192)
+          this.local.halfWidth = 32
+          break
+        case 3:
+          collisionRect(this, 0, -160, 100, 160)
+          this.local.halfWidth = 50
+          break
+      }
+    }, */
     async wait () {
       const prefix = this.local.type
       const enemies = this.node.parent
@@ -463,7 +520,7 @@ setup(function () {
       teamX: 0,
       teamY: 560,
       data: [
-        { name: 'enemy', type: ['engineer', 'engineer', 'engineer'], x: 950, y: 560 }
+        { name: 'enemy', type: ['umbrella', 'umbrella', 'umbrella'], x: 950, y: 560 }
       ]
     },
     two: {
