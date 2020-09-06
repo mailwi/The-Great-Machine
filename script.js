@@ -8,7 +8,7 @@ setup(function () {
 
   const teamObj = [
     {
-      name: 'The BigHealther',
+      name: 'Daddy',
       hp: 250,
       maxHP: 250,
       baseDamage: 30,
@@ -16,14 +16,14 @@ setup(function () {
       damageAbsorption: 25
     },
     {
-      name: 'The Attacker',
+      name: 'Atreus',
       hp: 100,
       maxHP: 100,
       baseDamage: 50,
       damage: 50
     },
     {
-      name: 'The Girl',
+      name: 'Scylla',
       hp: 175,
       maxHP: 175,
       baseDamage: 10,
@@ -74,6 +74,8 @@ setup(function () {
   }
 
   let fight = false
+
+  let selectedChar = 0
 
   let charQueue = 0
   let charTarget = 0
@@ -220,6 +222,13 @@ setup(function () {
     clone () {
       camera.add(this)
       this.local.index = team.local.index
+
+      this.whenThisSpriteClicked(() => {
+        if (!fight) {
+          selectedChar = this.local.index - 1
+        }
+      })
+
       whenIReceive(this, 'char_attack', () => {
         if (teamObj[charQueue].hp > 0) {
           if (this.local.index === charQueue + 1) {
@@ -402,6 +411,35 @@ setup(function () {
     clone () {
       this.switchCostumeTo(this.local.type)
       this.whenThisSpriteClicked(this.local.f)
+    }
+  })
+
+  const infoInterface = new SpriteNode({
+    name: 'InfoInterface',
+    layer: 999,
+    start () {
+      this.show()
+    },
+    draw () {
+      if (!fight) {
+        const charObj = teamObj[selectedChar]
+
+        fill('white')
+        font(24, 'Arial')
+        text(charObj.name, 60, 600)
+        font(21, 'Arial')
+        text('Damage: ' + charObj.damage, 60, 675)
+        if (charObj.damageAbsorption) {
+          text('Damage absorption: ' + charObj.damageAbsorption, 210, 675)
+        }
+        noStroke()
+        rect(60, 615, 300, 25)
+        fill('red')
+        rect(60, 615, 300 * (charObj.hp / charObj.maxHP), 25)
+        fill('black')
+        font(16, 'Arial')
+        text(charObj.hp + ' / ' + charObj.maxHP, 90, 632)
+      }
     }
   })
 
