@@ -197,20 +197,22 @@ class SpriteNode extends BasicNode {
 
         if (spriteData.start) {
           this.nodeStart = spriteData.start
-          whenGameStart(this, async () => {
-            await this.costumesLoaded
-            await this.soundsLoaded
-
-            if (!spriteData.clone && spriteData.wait) {
-              this.nodeWait = spriteData.wait
-              foreverWait(this, async () => {
-                await this.nodeWait()
-              })
-            }
-
-            await this.nodeStart()
-          })
         }
+        whenGameStart(this, async () => {
+          await this.costumesLoaded
+          await this.soundsLoaded
+
+          if (!spriteData.clone && spriteData.wait) {
+            this.nodeWait = spriteData.wait
+            foreverWait(this, async () => {
+              await this.nodeWait()
+            })
+          }
+
+          if (spriteData.start) {
+            await this.nodeStart()
+          }
+        })
 
         if (spriteData.clone) {
           this.whenIStartAsAClone(() => {
