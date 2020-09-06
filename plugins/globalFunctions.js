@@ -38,6 +38,10 @@ function startSound (sprite, name, instanceSound) {
   A.startSound(sprite, name, instanceSound)
 }
 
+async function playSoundUntilDone (sprite, name, instanceSound = false) {
+  await A.playSoundUntilDone(sprite, name, instanceSound = false)
+}
+
 /* engine functions */
 
 function setup (f) {

@@ -89,7 +89,7 @@ setup(function () {
 
   let upgrading = false
 
-  let spares = 0
+  let spares = 2000
 
   const char = new SpriteNode({
     name: 'Char',
@@ -441,6 +441,9 @@ setup(function () {
       { name: 'lvl3', data: 'images/map/lvl3.png' },
       { name: 'lvl4', data: 'images/map/lvl4.png' }
     ],
+    sounds: {
+      music: 'sounds/music.ogg'
+    },
     start () {
       this.show()
       whenIReceive(this, 'new_room', () => {
@@ -448,6 +451,9 @@ setup(function () {
           this.switchCostumeTo(room.local.name)
         }
       })
+    },
+    async wait () {
+      await playSoundUntilDone(this, 'music')
     },
     draw () {
       if (room.local.name.indexOf('lvl') === -1) {
@@ -888,27 +894,66 @@ setup(function () {
       teamX: 0,
       teamY: 560,
       data: [
-        // { name: 'upgrade', x: 250, y: 500 },
+        { name: 'repair', x: 2050, y: 500 },
         // { name: 'door', x: 100, y: 535, room: 'two' },
         { name: 'decoration', type: 'bank1', x: 250, y: 360 },
-        // { name: 'repair', x: 250, y: 500 },
-        // { name: 'enemy', type: ['meat'], x: 950, y: 560 },
-        // { name: 'enemy', type: ['meat', 'meat'], x: 1250, y: 560 },
-        { name: 'enemy', type: ['meat', 'spider'], x: 550, y: 560 },
-        { name: 'enemy', type: ['meat', 'meat'], x: 1250, y: 560 }
-        // { name: 'enemy', type: ['ghost', 'ghost'], x: 2650, y: 560 }
+        { name: 'enemy', type: ['meat'], x: 950, y: 560 },
+        { name: 'enemy', type: ['meat', 'meat'], x: 1650, y: 560 },
+        { name: 'enemy', type: ['meat', 'spider'], x: 2350, y: 560 },
+        { name: 'enemy', type: ['meat', 'meat'], x: 3050, y: 560 },
+        { name: 'enemy', type: ['ghost', 'ghost'], x: 3750, y: 560 }
       ],
-      max: 2100,
-      maxGoto: 'two'
+      max: 3500,
+      maxGoto: 'lvl2'
     },
-    two: {
+    lvl2: {
       teamX: 0,
       teamY: 560,
       data: [
-        { name: 'door', x: 10, y: 535, room: 'lvl1' },
-        { name: 'enemy', type: ['meat'], x: 300, y: 560 }
+        { name: 'upgrade', x: 250, y: 500 },
+        { name: 'repair', x: 1050, y: 500 },
+        { name: 'repair', x: 3050, y: 500 },
+        { name: 'enemy', type: ['ghost', 'turret'], x: 950, y: 560 },
+        { name: 'enemy', type: ['meat', 'meat', 'meat'], x: 1650, y: 560 },
+        { name: 'enemy', type: ['turret', 'turret'], x: 2350, y: 560 },
+        { name: 'enemy', type: ['meat', 'spider', 'turret'], x: 3050, y: 560 },
+        { name: 'enemy', type: ['ghost', 'spider', 'turret'], x: 3750, y: 560 },
+        { name: 'enemy', type: ['ghost', 'ghost'], x: 4650, y: 560 }
       ],
-      max: 300
+      max: 4700,
+      maxGoto: 'lvl3'
+    },
+    lvl3: {
+      teamX: 0,
+      teamY: 560,
+      data: [
+        { name: 'upgrade', x: 250, y: 500 },
+        { name: 'repair', x: 1050, y: 500 },
+        { name: 'repair', x: 3050, y: 500 },
+        { name: 'enemy', type: ['ghost', 'turret'], x: 950, y: 560 },
+        { name: 'enemy', type: ['meat', 'meat', 'umbrella'], x: 1650, y: 560 },
+        { name: 'enemy', type: ['turret', 'turret'], x: 2350, y: 560 },
+        { name: 'enemy', type: ['meat', 'umbrella', 'turret'], x: 3050, y: 560 },
+        { name: 'enemy', type: ['ghost', 'spider', 'turret'], x: 3750, y: 560 },
+        { name: 'enemy', type: ['ghost', 'umbrella'], x: 4650, y: 560 }
+      ],
+      max: 4700,
+      maxGoto: 'lvl4'
+    },
+    lvl4: {
+      teamX: 0,
+      teamY: 560,
+      data: [
+        { name: 'upgrade', x: 250, y: 500 },
+        { name: 'repair', x: 1050, y: 500 },
+        { name: 'repair', x: 3050, y: 500 },
+        { name: 'enemy', type: ['spider', 'turret'], x: 950, y: 560 },
+        { name: 'enemy', type: ['meat', 'meat', 'meat'], x: 1650, y: 560 },
+        { name: 'enemy', type: ['turret', 'spider'], x: 2350, y: 560 },
+        { name: 'enemy', type: ['meat', 'umbrella', 'turret'], x: 3050, y: 560 },
+        { name: 'enemy', type: ['umbrella', 'umbrella', 'umbrella'], x: 3750, y: 560 },
+        { name: 'enemy', type: ['umbrella', 'umbrella', 'umbrella'], x: 4650, y: 560 }
+      ]
     }
   }
 
