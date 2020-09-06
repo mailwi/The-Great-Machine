@@ -675,7 +675,7 @@ setup(function () {
     clone () {
       camera.add(this)
       this.whenThisSpriteClicked(() => {
-        if (touching(this, 'Char') && !fight) {
+        if (touching(this, 'Char') && !fight && !this.local.closed) {
           room.local.name = this.local.data.room
           loadCurrentRoom()
         }
